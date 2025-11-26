@@ -22,7 +22,7 @@ Le système intègre également un **module de prévision basé sur le machine l
 - **Frontend** : HTML, CSS, JavaScript
 - **Base de données** : MySQL
 - **Machine Learning** : Scikit-learn (régression linéaire)
-- **Déploiement** : Serveur local ou cloud (Railway, Netlify)
+
 
 ---
 
