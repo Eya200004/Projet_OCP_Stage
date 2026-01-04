@@ -7,7 +7,6 @@ from werkzeug.security import generate_password_hash
 from app import app
 from app.Database import get_db_connection
 from .Database import User          
-from app.ML_model import predire_besoin
 from datetime import datetime, timezone
 now = datetime.now(timezone.utc)
 
@@ -189,7 +188,7 @@ def ajouter_equipement():
     equipement_id = cur.lastrowid
 
     # Journaliser le mouvement (utilisateur connecté)
-    nom_utilisateur = getattr(current_user, "username", "inconnu")
+    nom_utilisateur = current_user.email
     cur.execute("""
         INSERT INTO Mouvements (nom_utilisateur, Equipement_id, type_mouvement, quantite, date_mouvement)
         VALUES (%s, %s, 'entrée', %s, CURDATE())
@@ -227,7 +226,7 @@ def modifier_equipement(equipement_id):
         difference = nouvelle_quantite - ancienne_quantite
         if difference != 0:
             type_mouvement = 'entrée' if difference > 0 else 'sortie'
-            nom_utilisateur = getattr(current_user, "username", "inconnu")
+            nom_utilisateur = current_user.email
             cur.execute("""
                 INSERT INTO Mouvements (nom_utilisateur, Equipement_id, type_mouvement, quantite, date_mouvement)
                 VALUES (%s, %s, %s, %s, CURDATE())
@@ -258,7 +257,7 @@ def supprimer_equipement(equipement_id):
 
     if result:
         quantite = result[0]
-        nom_utilisateur = getattr(current_user, "username", "inconnu")
+        nom_utilisateur = current_user.email
 
         cur.execute("""
             INSERT INTO Mouvements (nom_utilisateur, Equipement_id, type_mouvement, quantite, date_mouvement)
@@ -272,35 +271,6 @@ def supprimer_equipement(equipement_id):
     conn.close()
     return redirect(url_for('afficher_equipements'))
 
-
-#prevision (PROTÉGÉ) 
-@app.route('/prevision', methods=['GET'])
-@login_required
-def page_prevision():
-    return render_template('prevision.html')
-
-
-@app.route('/prevoir_reapprovisionnement', methods=['POST'])
-@login_required
-def prevoir_reapprovisionnement():
-    try:
-        data = request.get_json()
-        equipement_id = int(data.get('equipement_id'))
-        date_future = data.get('date_future')
-
-        result = predire_besoin(equipement_id, date_future)
-
-        if isinstance(result, str):
-            return jsonify({'error': result}), 400
-
-        return jsonify({
-            'equipement_id': equipement_id,
-            'date': date_future,
-            'prediction': result
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': f'Erreur serveur : {str(e)}'}), 500
 
 
 # recherche(peut rester public si tu veux)
