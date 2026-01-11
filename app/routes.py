@@ -131,7 +131,6 @@ def dashboard():
 @app.route('/delete_user/<int:user_id>', methods=['POST','GET'])
 @login_required
 def delete_user(user_id):
-    # Vérifie que seul un admin peut supprimer
     if current_user.role != "admin":
         flash("Accès refusé : seuls les administrateurs peuvent supprimer des utilisateurs.", "danger")
         return redirect(url_for('dashboard'))
@@ -141,12 +140,10 @@ def delete_user(user_id):
         flash("Utilisateur introuvable.", "warning")
         return redirect(url_for('dashboard'))
 
-    # Empêche la suppression de soi-même (optionnel)
     if user.id == current_user.id:
         flash("Vous ne pouvez pas vous supprimer vous-même.", "danger")
         return redirect(url_for('dashboard'))
-
-    # Supprimer de la base de donnée
+    
     User.delete(user_id)
 
     flash(f"L'utilisateur {user.email} a été supprimé.", "success")
@@ -189,10 +186,11 @@ def ajouter_equipement():
 
     # Journaliser le mouvement (utilisateur connecté)
     nom_utilisateur = current_user.email
+    user_id = current_user.id
     cur.execute("""
-        INSERT INTO Mouvements (nom_utilisateur, Equipement_id, type_mouvement, quantite, date_mouvement)
-        VALUES (%s, %s, 'entrée', %s, CURDATE())
-    """, (nom_utilisateur, equipement_id, quantite))
+        INSERT INTO Mouvements (nom_utilisateur,user_id, Equipement_id, type_mouvement, quantite, date_mouvement)
+        VALUES (%s, %s,%s, 'entrée', %s, CURDATE())
+    """, (nom_utilisateur,user_id, equipement_id, quantite))
 
     conn.commit()
     cur.close()
@@ -227,10 +225,11 @@ def modifier_equipement(equipement_id):
         if difference != 0:
             type_mouvement = 'entrée' if difference > 0 else 'sortie'
             nom_utilisateur = current_user.email
+            user_id = current_user.id
             cur.execute("""
-                INSERT INTO Mouvements (nom_utilisateur, Equipement_id, type_mouvement, quantite, date_mouvement)
-                VALUES (%s, %s, %s, %s, CURDATE())
-            """, (nom_utilisateur, equipement_id, type_mouvement, abs(difference)))
+                INSERT INTO Mouvements (nom_utilisateur,user_id, Equipement_id, type_mouvement, quantite, date_mouvement)
+                VALUES (%s, %s, %s, %s,%s, CURDATE())
+            """, (nom_utilisateur,user_id, equipement_id, type_mouvement, abs(difference)))
 
         conn.commit()
         cur.close()
@@ -258,11 +257,13 @@ def supprimer_equipement(equipement_id):
     if result:
         quantite = result[0]
         nom_utilisateur = current_user.email
+        user_id = current_user.id
 
         cur.execute("""
-            INSERT INTO Mouvements (nom_utilisateur, Equipement_id, type_mouvement, quantite, date_mouvement)
-            VALUES (%s, %s, 'sortie', %s, CURDATE())
-        """, (nom_utilisateur, equipement_id, quantite))
+            INSERT INTO Mouvements
+            (nom_utilisateur, user_id, Equipement_id, type_mouvement, quantite, date_mouvement)
+            VALUES (%s, %s, %s, 'sortie', %s, CURDATE())
+            """, (nom_utilisateur,user_id, equipement_id, quantite))
 
         cur.execute("DELETE FROM Equipements WHERE Equipement_id = %s", (equipement_id,))
 
